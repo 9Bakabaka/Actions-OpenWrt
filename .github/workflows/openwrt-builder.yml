@@ -1,13 +1,6 @@
 #
 # https://github.com/P3TERX/Actions-OpenWrt
-#
-# File: .github/workflows/openwrt-bulder.yml
-# Description: Build OpenWrt using GitHub Actions
-#
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
+# Fixed & Customized for Bakabaka_9 (NX30 Pro / Kernel 6.12)
 #
 
 name: OpenWrt Builder
@@ -15,10 +8,18 @@ name: OpenWrt Builder
 on:
   repository_dispatch:
   workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'true'
 
 env:
+  # === 核心配置区域 ===
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-25.12
+  REPO_BRANCH: openwrt-25.12   # 锁定 Kernel 6.12 分支
+  SSH_ACTIONS: true            # 强制开启 SSH，改为 false 可关闭
+  # =================
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
   DIY_P1_SH: diy-part1.sh
@@ -27,7 +28,6 @@ env:
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  SSH_ACTIONS: true
 
 jobs:
   build:
@@ -78,6 +78,13 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
+
+    # === 关键修改：插入 SSH 连接步骤 ===
+    # 只要 SSH_ACTIONS 为 true，这里就会卡住等你连接
+    - name: SSH connection to Actions
+      uses: mxschmitt/action-tmate@v3
+      if: env.SSH_ACTIONS == 'true'
+    # ===============================
 
     - name: Download package
       id: package
@@ -132,7 +139,7 @@ jobs:
       run: |
         echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         touch release.txt
-        [ ${UPLOAD_GOFILE} = true && ${{ steps.gofile.outputs.url }} ] && echo "🔗 [GoFile](${{ steps.gofile.outputs.url }})" >> release.txt
+        echo "NX30 Pro Kernel 6.12 Build" >> release.txt
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release
